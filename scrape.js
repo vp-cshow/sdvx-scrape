@@ -2,7 +2,13 @@ import * as cheerio from 'cheerio';
 import fetch from 'node-fetch';
 import { writeFile } from 'node:fs';
 
-const SDVX_SONGLIST_BASE_URL = 'https://p.eagate.573.jp/game/eacsdvx/vi/music/index.html';
+const SDVX_BASE_URL = 'https://p.eagate.573.jp'
+const SDVX_SONGLIST_ENDPOINT = '/game/eacsdvx/vi/music/index.html';
+
+
+function scrapeDetailedPage(endpoint) {
+
+}
 
 function getDifficulty(cheerio_element, api) {
     let difficulty_name = api(cheerio_element).attr()['class'].toUpperCase()
@@ -25,7 +31,7 @@ let pageNum = 1;
 var breakLoop = false;
 let songs = []
 while (!breakLoop) {
-    await fetch(`${SDVX_SONGLIST_BASE_URL}?page=${pageNum}`)
+    await fetch(`${SDVX_BASE_URL + SDVX_SONGLIST_ENDPOINT}?page=${pageNum}`)
     .then(res => res.arrayBuffer())
     .then(buffer => {
 
@@ -39,8 +45,15 @@ while (!breakLoop) {
         }
 
         $('div.music').each((i, music_div) => {
+            $(music_div).find('.jk').each((i, jacket_html) => {
+                var detailed_page_endpoint = $($(jacket_html).find('a').get(0)).attr()['href']
+                scrapeDetailedPage(detailed_page_endpoint)
+            }
+            )
             $(music_div).find('.inner').each((i, song_html) => {
                 $(song_html).find('.info').each((i, song_html_div) => {
+
+                    // songs metadata -> json
                     var p_tag_cheerios = $(song_html_div).find('p')
                     const title = $(p_tag_cheerios.get(0)).text()
                     const artist = $(p_tag_cheerios.get(1)).text()
@@ -64,6 +77,10 @@ while (!breakLoop) {
                     else {
                         pack_name = $(p_tag_cheerios.get(5)).text()
                     }
+
+                    // jackets
+
+
 
                     
                     
