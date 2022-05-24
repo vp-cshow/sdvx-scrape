@@ -77,10 +77,10 @@ function getDifficulty(cheerio_element, api) {
 // ]
 
 let pageNum = 1;
-var breakLoop = false;
+var done = false;
 let songs = []
 
-while (!breakLoop) {
+while (!done) {
     await fetch(`${SDVX_BASE_URL + SDVX_SONGLIST_ENDPOINT}?page=${pageNum}`)
     .then(res => res.arrayBuffer())
     .then(buffer => {
@@ -90,7 +90,7 @@ while (!breakLoop) {
         const $ = cheerio.load(data)
 
         if ($('.music').length == 0) {
-            breakLoop = true
+            done = true
             return false;
         }
 
