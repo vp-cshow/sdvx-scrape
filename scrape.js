@@ -16,46 +16,47 @@ function scrapeDetailedPage(endpoint) {
             const decoder = new TextDecoder('shift_jis');
             const data = decoder.decode(buffer)
             const $ = cheerio.load(data)
-
             
             var song_name = $($('.info').find('p').get(0)).text()
 
-            // difficulty data
             $('.cat').each((i, difficulty_div) => {
-
-                
-                //difficulty data, effector + illustrator
-                const p_tag_cheerios = $(difficulty_div).find('p')
-                const difficulty_name_and_rating = getDifficulty(p_tag_cheerios.get(0), $)
-                const difficulty_illustrator = $(p_tag_cheerios.get(1)).text()
-                const difficulty_effector = $(p_tag_cheerios.get(2)).text()
-
-                //jacket, save to disk
-                var dir_to_save = `./jackets/${song_name}/${difficulty_name_and_rating[0]}`
-
-                if (!existsSync(dir_to_save)){
-                    mkdirSync(dir_to_save, { recursive: true });
-                }
-
-                const img_endpoint = SDVX_BASE_URL + $(difficulty_div).find('img').attr()['src']
-
-                const streamPipeline = promisify(pipeline);
-                fetch(img_endpoint)
-                .then(response => {
-                    streamPipeline(response.body, createWriteStream(`${dir_to_save}/jacket.jpg`));
-                })
-                
-
+                const { difficulty_name_and_rating, difficulty_illustrator, difficulty_effector } = scrapeDifficultyDataInDetailPage($, difficulty_div, song_name);
                 difficulties_json[difficulty_name_and_rating[0]] = {
                     level: difficulty_name_and_rating[1],
                     illustrator: difficulty_illustrator,
                     effector: difficulty_effector
                 }
-
             })
         }
     )
     return difficulties_json
+}
+
+function scrapeDifficultyDataInDetailPage($, difficulty_div, song_name) {
+    const p_tag_cheerios = $(difficulty_div).find('p');
+    const difficulty_name_and_rating = getDifficulty(p_tag_cheerios.get(0), $);
+    const difficulty_illustrator = $(p_tag_cheerios.get(1)).text();
+    const difficulty_effector = $(p_tag_cheerios.get(2)).text();
+
+    saveJacketToDisk(song_name, difficulty_name_and_rating, $, difficulty_div);
+
+    return { difficulty_name_and_rating, difficulty_illustrator, difficulty_effector };
+}
+
+function saveJacketToDisk(song_name, difficulty_name_and_rating, $, difficulty_div) {
+    var dir_to_save = `./jackets/${song_name}/${difficulty_name_and_rating[0]}`;
+
+    if (!existsSync(dir_to_save)) {
+        mkdirSync(dir_to_save, { recursive: true });
+    }
+
+    const img_endpoint = SDVX_BASE_URL + $(difficulty_div).find('img').attr()['src'];
+
+    const streamPipeline = promisify(pipeline);
+    fetch(img_endpoint)
+        .then(response => {
+            streamPipeline(response.body, createWriteStream(`${dir_to_save}/jacket.jpg`));
+        });
 }
 
 function getDifficulty(cheerio_element, api) {
@@ -78,6 +79,7 @@ function getDifficulty(cheerio_element, api) {
 let pageNum = 1;
 var breakLoop = false;
 let songs = []
+
 while (!breakLoop) {
     await fetch(`${SDVX_BASE_URL + SDVX_SONGLIST_ENDPOINT}?page=${pageNum}`)
     .then(res => res.arrayBuffer())
@@ -115,7 +117,6 @@ while (!breakLoop) {
                     else {
                         pack_name = $(p_tag_cheerios.get(5)).text()
                     }
-
 
                     songs.push({
                         title: title,
